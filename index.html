@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="タスク">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>タスクマトリクス</title>
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:#F6F7F9;color:#1B2430;font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif;-webkit-text-size-adjust:100%;overscroll-behavior:none}
+button{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;color:inherit}
+input{font-family:inherit}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;max-width:560px;margin:0 auto;background:#F6F7F9}
+header{padding:calc(env(safe-area-inset-top) + 14px) 20px 12px;background:#fff;display:flex;flex-direction:column;gap:12px;border-bottom:1px solid #E3E6EB;box-shadow:0 2px 8px rgba(20,28,40,.04);position:relative;z-index:3}
+.toprow{display:flex;justify-content:space-between;align-items:flex-end}
+.sub{font-size:13px;color:#5B6573;font-weight:500}
+h1{margin:0;font-size:26px;font-weight:700}
+.iconseg{display:flex;gap:2px;padding:3px;background:#EEF1F4;border-radius:12px}
+.iconseg button{width:44px;height:38px;border-radius:9px;border:none;display:flex;align-items:center;justify-content:center;background:transparent;color:#5B6573}
+.iconseg button.on,.seg button.on{background:#fff;color:#1B2430;box-shadow:0 1px 3px rgba(20,28,40,.12)}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;background:#EEF1F4;border-radius:12px}
+.seg button{height:38px;border-radius:9px;border:none;font-size:14px;font-weight:700;background:transparent;color:#5B6573}
+.navrow{display:flex;align-items:center;gap:8px}
+.circ{width:44px;height:44px;border-radius:22px;border:1px solid #E3E6EB;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rlabel{flex:1;display:flex;flex-direction:column;align-items:center;min-width:0}
+.rl{font-size:16px;font-weight:700}
+.rs{font-size:11px;color:#5B6573}
+.todaybtn{height:44px;padding:0 14px;border-radius:22px;font-size:13px;font-weight:700;flex-shrink:0;background:#F1F3F6;color:#5B6573;border:1px solid #E3E6EB}
+.todaybtn.active{background:#EAF0FE;color:#1E43B8;border-color:#C9D6FB}
+.chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.chip{min-height:48px;border-radius:12px;padding:6px 8px;display:flex;flex-direction:column;gap:2px;text-align:left;background:var(--bg);color:var(--fg);border:1px solid var(--line)}
+.chip.on{border:2px solid var(--dot)}
+.chip .qtop span:first-child{font-size:10px;font-weight:700}
+.chip .cn{font-size:12px;font-weight:700;white-space:nowrap}
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 20px calc(112px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+.matrix{display:grid;grid-template-columns:22px minmax(0,1fr) minmax(0,1fr);grid-template-rows:22px auto auto;gap:8px}
+.axis{font-size:12px;font-weight:700;color:#4A5462;text-align:center}
+.axis.v{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15}
+.qcard{border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left;min-height:150px;background:var(--bg);border:1px solid var(--line);color:#1B2430}
+.qcard.on{border:2px solid var(--dot)}
+.qtop{display:flex;justify-content:space-between;align-items:center;gap:4px}
+.qnum{font-size:11px;font-weight:700;color:var(--fg)}
+.badge{min-width:24px;height:24px;padding:0 6px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;background:var(--badge)}
+.chip .badge{min-width:20px;height:20px;font-size:11px;padding:0 5px}
+.qname{font-size:16px;font-weight:700;color:var(--fg)}
+.qprev{display:flex;flex-direction:column;gap:4px;min-height:54px}
+.pv{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv.over{color:#A1271B;font-weight:700}
+.more{font-size:11px;color:#5B6573}
+.sel,.group{display:flex;flex-direction:column;gap:8px}
+.sechead{position:sticky;top:-16px;z-index:2;margin:0 -20px;padding:10px 20px;background:#F6F7F9;display:flex;justify-content:space-between;align-items:center;gap:8px;box-shadow:0 1px 0 #E3E6EB}
+.sechead h2{margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.group .sechead h2{font-size:15px}
+.hint{font-size:12px;color:#5B6573}
+.dot{display:inline-block;width:10px;height:10px;border-radius:5px;flex-shrink:0;background:var(--dot)}
+.tip{margin:0;font-size:12px;color:#5B6573}
+.task{width:100%;text-align:left;border:none;border-radius:14px;padding:12px 16px;display:flex;gap:12px;align-items:center;color:#1B2430;min-height:60px;background:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;transition:transform 120ms ease,box-shadow 120ms ease,background 120ms ease}
+.task.pressing{background:#F1F3F6;transform:scale(.97);box-shadow:0 0 0 2px #2F5BEA}
+.box{width:24px;height:24px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:2px solid #AEB5C0}
+.box.done{background:#2F5BEA;border-color:#2F5BEA}
+.tbody{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.ttl{font-size:15px;font-weight:500;word-break:break-word}
+.ttl.done{color:#5B6573;text-decoration:line-through}
+.due{font-size:12px;color:#5B6573}
+.due.over{color:#A1271B;font-weight:700}
+.empty{background:#fff;border-radius:14px;padding:24px 16px;text-align:center;font-size:13px;color:#5B6573;line-height:1.7}
+.fab{position:absolute;z-index:10;right:20px;bottom:calc(28px + env(safe-area-inset-bottom));width:60px;height:60px;border-radius:30px;border:none;background:#2F5BEA;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(47,91,234,.35)}
+#overlay{position:fixed;inset:0;z-index:20;background:rgba(20,24,32,.45);display:flex;flex-direction:column;justify-content:flex-end}
+#overlay[hidden]{display:none}
+.sheet{width:100%;max-width:560px;margin:0 auto;max-height:92%;overflow-y:auto;background:#fff;border-radius:22px 22px 0 0;padding:12px 20px calc(28px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:16px}
+.handle{width:40px;height:5px;border-radius:3px;background:#D5D9E0;align-self:center}
+.shead{display:flex;justify-content:space-between;align-items:center}
+.shead h2{margin:0;font-size:18px;font-weight:700}
+.closebtn{width:44px;height:44px;border-radius:22px;border:none;background:#F1F3F6;display:flex;align-items:center;justify-content:center}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label,.lbl{font-size:13px;font-weight:500}
+.field input{height:48px;border-radius:12px;border:1px solid #D5D9E0;padding:0 14px;font-size:16px;color:#1B2430;background:#fff;width:100%;min-width:0;-webkit-appearance:none;appearance:none}
+.field input[aria-invalid="true"]{border:2px solid #D64534}
+.duerow{display:flex;gap:8px}
+.duerow input{flex:1}
+.clearbtn{height:48px;padding:0 14px;border-radius:12px;border:1px solid #D5D9E0;background:#fff;font-size:14px;font-weight:700;color:#4A5462;flex-shrink:0}
+.twocol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.pills{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.pill{height:44px;border-radius:12px;font-size:14px;font-weight:700;background:#fff;color:#4A5462;border:1px solid #D5D9E0}
+.pill.on{background:#EAF0FE;color:#1E43B8;border:2px solid #2F5BEA}
+.qpreview{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:12px;font-size:14px;font-weight:700;background:var(--bg);color:var(--fg)}
+.primary{height:52px;border-radius:14px;border:none;background:#2F5BEA;color:#fff;font-size:16px;font-weight:700}
+.secondary{height:52px;border-radius:14px;border:1px solid #D5D9E0;background:#fff;color:#1B2430;font-size:16px;font-weight:700}
+.danger{height:52px;border-radius:14px;border:1px solid #F3C3BD;background:#FDECEA;color:#A1271B;font-size:16px;font-weight:700}
+.danger.confirm{background:#D64534;color:#fff;border-color:#D64534}
+.btnrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tcard{padding:12px 14px;border-radius:12px;background:#F6F7F9;display:flex;flex-direction:column;gap:3px}
+.tcard .ttl{font-weight:700}
+.matrix.mini{grid-template-rows:20px auto auto}
+.mcard{min-height:84px;border-radius:14px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:4px;background:var(--bg);color:var(--fg);border:1px solid var(--line)}
+.mcard.on{border:2px solid var(--dot)}
+#toast{position:fixed;z-index:30;left:20px;right:20px;max-width:520px;margin:0 auto;bottom:calc(104px + env(safe-area-inset-bottom));padding:14px 16px;border-radius:14px;background:#1B2430;color:#fff;font-size:14px;font-weight:500;box-shadow:0 6px 18px rgba(20,28,40,.25)}
+#toast[hidden]{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+<header id="hdr"></header>
+<main id="main"></main>
+<button type="button" class="fab" data-act="fab" aria-label="タスクを追加">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+</div>
+<div id="overlay" hidden></div>
+<div id="toast" role="status" hidden></div>
+<script>
+(function () {
+  'use strict';
+  var KEY = 'taskmatrix.v1';
+  var Q = {
+    q1: { num: '第1領域', name: '今すぐやる', axis: '緊急・重要', hint: '最優先で着手', dot: '#D64534', bg: '#FDECEA', fg: '#A1271B', line: '#F3C3BD' },
+    q2: { num: '第2領域', name: '計画する', axis: '重要・緊急でない', hint: '時間を確保して進める', dot: '#2F5BEA', bg: '#EAF0FE', fg: '#1E43B8', line: '#C9D6FB' },
+    q3: { num: '第3領域', name: '任せる', axis: '緊急・重要でない', hint: '依頼・短時間で処理', dot: '#E0701A', bg: '#FDF0E6', fg: '#9A4A0C', line: '#F5D3B6' },
+    q4: { num: '第4領域', name: '減らす', axis: '緊急でない・重要でない', hint: 'やめる・後回し', dot: '#8A93A0', bg: '#EEF1F4', fg: '#4A5462', line: '#D5D9E0' }
+  };
+  var QK = ['q1', 'q2', 'q3', 'q4'];
+  var WD = ['日', '月', '火', '水', '木', '金', '土'];
+  var I = {
+    grid: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
+    list: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',
+    left: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
+    right: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>',
+    x: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+  };
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parse(v) { var p = v.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n); }
+  function md(d) { return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
+  function mdw(d) { return md(d) + '（' + WD[d.getDay()] + '）'; }
+  function todayIso() { return iso(new Date()); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function qStyle(k) { var c = Q[k]; return '--bg:' + c.bg + ';--fg:' + c.fg + ';--dot:' + c.dot + ';--line:' + c.line + ';--badge:' + (k === 'q4' ? '#5B6573' : c.fg); }
+  function vl(t) { return t.split('').map(function (c) { return '<span>' + c + '</span>'; }).join(''); }
+  function qOf(urg, imp) { return urg ? (imp ? 'q1' : 'q3') : (imp ? 'q2' : 'q4'); }
+
+  var data = { tasks: [], nextId: 1, view: 'matrix', mode: 'day' };
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) { var p = JSON.parse(raw); if (p && Array.isArray(p.tasks)) data = Object.assign(data, p); }
+  } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} }
+
+  var ui = { anchor: todayIso(), selQ: 'q1', compact: false, sheet: null, actionId: null, confirmDel: false, openedAt: 0,
+    draft: { title: '', due: '', urg: true, imp: true, editId: null } };
+
+  var hdr = document.getElementById('hdr');
+  var main = document.getElementById('main');
+  var overlay = document.getElementById('overlay');
+  var toastEl = document.getElementById('toast');
+
+  function range() {
+    var T = todayIso(), a = parse(ui.anchor), start, end, label, sub, unit;
+    if (data.mode === 'day') {
+      start = a; end = a; unit = '日'; label = mdw(a);
+      var tm = iso(addDays(parse(T), 1)), ys = iso(addDays(parse(T), -1));
+      sub = ui.anchor === T ? '今日' : ui.anchor === tm ? '明日' : ui.anchor === ys ? '昨日' : a.getFullYear() + '年';
+    } else if (data.mode === 'week') {
+      start = addDays(a, -((a.getDay() + 6) % 7)); end = addDays(start, 6); unit = '週';
+      label = md(start) + ' – ' + md(end); sub = '月曜〜日曜';
+    } else {
+      start = new Date(a.getFullYear(), a.getMonth(), 1); end = new Date(a.getFullYear(), a.getMonth() + 1, 0); unit = '月';
+      label = a.getFullYear() + '年' + (a.getMonth() + 1) + '月'; sub = md(start) + ' – ' + md(end);
+    }
+    var sIso = iso(start), eIso = iso(end), has = sIso <= T && T <= eIso;
+    var cur = data.mode === 'day' ? (has ? '今日' : 'この日') : data.mode === 'week' ? (has ? '今週' : 'この週') : (has ? '今月' : 'この月');
+    return { T: T, sIso: sIso, eIso: eIso, label: label, sub: sub, unit: unit, hasToday: has, cur: cur };
+  }
+  function visible(r) {
+    return data.tasks.filter(function (t) {
+      if (!t.due) return true;
+      if (t.due >= r.sIso && t.due <= r.eIso) return true;
+      return r.hasToday && !t.done && t.due < r.sIso;
+    });
+  }
+  function sortT(a, b) {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (a.due || '9999').localeCompare(b.due || '9999') || a.id - b.id;
+  }
+  function isOver(t, T) { return !!t.due && !t.done && t.due < T; }
+  function dueText(t, T) {
+    if (!t.due) return '期限なし';
+    var d = parse(t.due), tm = iso(addDays(parse(T), 1));
+    var txt = t.due === T ? '今日・' + mdw(d) : t.due === tm ? '明日・' + mdw(d) : mdw(d);
+    return (isOver(t, T) ? '期限切れ ' : '期限 ') + txt;
+  }
+  function find(id) { for (var i = 0; i < data.tasks.length; i++) if (data.tasks[i].id === id) return data.tasks[i]; return null; }
+
+  function taskRow(t, T) {
+    return '<button type="button" class="task" data-act="toggle" data-id="' + t.id + '" aria-pressed="' + t.done + '" aria-description="長押しで移動・編集・削除">' +
+      '<span class="box' + (t.done ? ' done' : '') + '">' + (t.done ? I.check : '') + '</span>' +
+      '<span class="tbody"><span class="ttl' + (t.done ? ' done' : '') + '">' + esc(t.title) + '</span>' +
+      '<span class="due' + (isOver(t, T) ? ' over' : '') + '">' + esc(dueText(t, T)) + '</span></span></button>';
+  }
+
+  function renderHeader() {
+    var r = range(), vis = visible(r), open = vis.filter(function (t) { return !t.done; }).length, h = '';
+    if (!ui.compact) {
+      h += '<div class="toprow"><div><div class="sub">' + r.cur + 'の未完了 ' + open + '件 ・ 完了 ' + (vis.length - open) + '件</div><h1>タスク</h1></div>' +
+        '<div class="iconseg">' +
+        '<button type="button" data-act="view" data-v="matrix" aria-label="マトリクス表示" aria-pressed="' + (data.view === 'matrix') + '" class="' + (data.view === 'matrix' ? 'on' : '') + '">' + I.grid + '</button>' +
+        '<button type="button" data-act="view" data-v="list" aria-label="リスト表示" aria-pressed="' + (data.view === 'list') + '" class="' + (data.view === 'list' ? 'on' : '') + '">' + I.list + '</button>' +
+        '</div></div>';
+      h += '<div class="seg" role="tablist" aria-label="期間">' + [['day', '日'], ['week', '週'], ['month', '月']].map(function (m) {
+        var on = data.mode === m[0];
+        return '<button type="button" role="tab" aria-selected="' + on + '" class="' + (on ? 'on' : '') + '" data-act="mode" data-v="' + m[0] + '">' + m[1] + '</button>';
+      }).join('') + '</div>';
+    }
+    h += '<div class="navrow"><button type="button" class="circ" data-act="prev" aria-label="前の' + r.unit + '">' + I.left + '</button>' +
+      '<div class="rlabel"><span class="rl">' + r.label + '</span><span class="rs">' + r.sub + '</span></div>' +
+      '<button type="button" class="circ" data-act="next" aria-label="次の' + r.unit + '">' + I.right + '</button>' +
+      '<button type="button" class="todaybtn' + (r.hasToday ? '' : ' active') + '" data-act="today">今日</button></div>';
+    if (ui.compact && data.view === 'matrix') {
+      h += '<div class="chips">' + QK.map(function (k) {
+        var c = Q[k], n = vis.filter(function (t) { return t.q === k && !t.done; }).length, on = ui.selQ === k;
+        return '<button type="button" class="chip' + (on ? ' on' : '') + '" style="' + qStyle(k) + '" data-act="pickq" data-q="' + k + '" aria-pressed="' + on + '" aria-label="' + c.num + ' ' + c.name + ' ' + n + '件">' +
+          '<span class="qtop"><span>' + c.num.replace('領域', '') + '</span><span class="badge">' + n + '</span></span><span class="cn">' + c.name + '</span></button>';
+      }).join('') + '</div>';
+    }
+    hdr.innerHTML = h;
+  }
+
+  function quadCard(k, vis, T) {
+    var c = Q[k], on = ui.selQ === k;
+    var open = vis.filter(function (t) { return t.q === k && !t.done; }).sort(sortT);
+    var pv = open.slice(0, 3).map(function (t) { return '<span class="pv' + (isOver(t, T) ? ' over' : '') + '">・' + esc(t.title) + '</span>'; }).join('');
+    if (open.length > 3) pv += '<span class="more">ほか' + (open.length - 3) + '件</span>';
+    if (!open.length) pv = '<span class="more">なし</span>';
+    return '<button type="button" class="qcard' + (on ? ' on' : '') + '" style="' + qStyle(k) + '" data-act="pickq" data-q="' + k + '" aria-pressed="' + on + '" aria-label="' + c.num + ' ' + c.name + ' ' + open.length + '件">' +
+      '<span class="qtop"><span class="qnum">' + c.num + '</span><span class="badge">' + open.length + '</span></span>' +
+      '<span class="qname">' + c.name + '</span><span class="qprev">' + pv + '</span></button>';
+  }
+
+  function renderMain() {
+    var r = range(), vis = visible(r), T = r.T, st = main.scrollTop, h = '';
+    if (data.view === 'matrix') {
+      h += '<div class="matrix"><span></span><span class="axis">緊急</span><span class="axis">緊急でない</span>' +
+        '<span class="axis v">' + vl('重要') + '</span>' + quadCard('q1', vis, T) + quadCard('q2', vis, T) +
+        '<span class="axis v">' + vl('重要でない') + '</span>' + quadCard('q3', vis, T) + quadCard('q4', vis, T) + '</div>';
+      var c = Q[ui.selQ], ts = vis.filter(function (t) { return t.q === ui.selQ; }).sort(sortT);
+      var open = ts.filter(function (t) { return !t.done; }).length;
+      h += '<section class="sel"><div class="sechead" style="' + qStyle(ui.selQ) + '"><h2><span class="dot"></span>' + c.num + '：' + c.name + '<span class="badge">' + open + '</span></h2><span class="hint">' + c.hint + '</span></div>' +
+        '<p class="tip">タスクを長押しすると移動・編集・削除ができます</p>' +
+        (ts.length ? ts.map(function (t) { return taskRow(t, T); }).join('') : '<div class="empty">この期間・領域のタスクはありません<br>右下の＋から追加できます</div>') + '</section>';
+    } else {
+      h += '<p class="tip">タスクを長押しすると移動・編集・削除ができます</p>';
+      QK.forEach(function (k) {
+        var c = Q[k], ts = vis.filter(function (t) { return t.q === k; }).sort(sortT);
+        h += '<section class="group"><div class="sechead" style="' + qStyle(k) + '"><h2><span class="dot"></span>' + c.num + '：' + c.name + '</h2><span class="hint">' + c.axis + '</span></div>' +
+          (ts.length ? ts.map(function (t) { return taskRow(t, T); }).join('') : '<div class="empty" style="padding:16px;text-align:left">タスクはありません</div>') + '</section>';
+      });
+    }
+    main.innerHTML = h;
+    main.scrollTop = st;
+  }
+
+  function moveCard(k, t) {
+    var c = Q[k], cur = t.q === k;
+    return '<button type="button" class="mcard' + (cur ? ' on' : '') + '" style="' + qStyle(k) + '" data-act="move" data-q="' + k + '" aria-pressed="' + cur + '">' +
+      '<span class="qtop"><span class="qnum">' + c.num + '</span>' + (cur ? '<span class="qnum">現在</span>' : '') + '</span><span class="qname">' + c.name + '</span></button>';
+  }
+
+  function renderOverlay() {
+    if (!ui.sheet) { overlay.hidden = true; overlay.innerHTML = ''; return; }
+    overlay.hidden = false;
+    var h;
+    if (ui.sheet === 'action') {
+      var t = find(ui.actionId);
+      if (!t) { ui.sheet = null; renderOverlay(); return; }
+      h = '<div class="sheet" role="dialog" aria-modal="true" aria-label="タスクの操作"><div class="handle"></div>' +
+        '<div class="shead"><h2>タスクの操作</h2><button type="button" class="closebtn" data-act="close" aria-label="閉じる">' + I.x + '</button></div>' +
+        '<div class="tcard"><span class="ttl">' + esc(t.title) + '</span><span class="due' + (isOver(t, todayIso()) ? ' over' : '') + '">' + esc(dueText(t, todayIso())) + '</span></div>' +
+        '<span class="lbl">領域を移動</span>' +
+        '<div class="matrix mini"><span></span><span class="axis">緊急</span><span class="axis">緊急でない</span><span class="axis v">' + vl('重要') + '</span>' + moveCard('q1', t) + moveCard('q2', t) +
+        '<span class="axis v">' + vl('重要でない') + '</span>' + moveCard('q3', t) + moveCard('q4', t) + '</div>' +
+        '<div class="btnrow"><button type="button" class="secondary" data-act="edit">編集</button>' +
+        '<button type="button" class="danger' + (ui.confirmDel ? ' confirm' : '') + '" data-act="delete">' + (ui.confirmDel ? '本当に削除する' : '削除') + '</button></div></div>';
+    } else {
+      var d = ui.draft, dk = qOf(d.urg, d.imp), c = Q[dk], editing = ui.sheet === 'edit';
+      var title = editing ? 'タスクを編集' : 'タスクを追加';
+      h = '<div class="sheet" role="dialog" aria-modal="true" aria-label="' + title + '"><div class="handle"></div>' +
+        '<div class="shead"><h2>' + title + '</h2><button type="button" class="closebtn" data-act="close" aria-label="閉じる">' + I.x + '</button></div>' +
+        '<div class="field"><label for="f-title">タスク名</label><input id="f-title" type="text" value="' + esc(d.title) + '" placeholder="例：来期予算の素案づくり" autocomplete="off" enterkeyhint="done"></div>' +
+        '<div class="field"><label for="f-due">期限（空欄なら期限なし）</label><div class="duerow"><input id="f-due" type="date" value="' + esc(d.due) + '"><button type="button" class="clearbtn" data-act="cleardue">クリア</button></div></div>' +
+        '<div class="twocol">' +
+        '<div class="field"><span class="lbl">緊急度</span><div class="pills"><button type="button" class="pill' + (d.urg ? ' on' : '') + '" data-act="urg" data-v="1" aria-pressed="' + d.urg + '">高い</button><button type="button" class="pill' + (!d.urg ? ' on' : '') + '" data-act="urg" data-v="0" aria-pressed="' + !d.urg + '">低い</button></div></div>' +
+        '<div class="field"><span class="lbl">重要度</span><div class="pills"><button type="button" class="pill' + (d.imp ? ' on' : '') + '" data-act="imp" data-v="1" aria-pressed="' + d.imp + '">高い</button><button type="button" class="pill' + (!d.imp ? ' on' : '') + '" data-act="imp" data-v="0" aria-pressed="' + !d.imp + '">低い</button></div></div>' +
+        '</div>' +
+        '<div class="qpreview" style="' + qStyle(dk) + '"><span class="dot"></span>' + c.num + '「' + c.name + '」に入ります</div>' +
+        '<button type="button" class="primary" data-act="save">' + (editing ? '保存する' : '追加する') + '</button></div>';
+    }
+    overlay.innerHTML = h;
+  }
+
+  function render() { renderHeader(); renderMain(); renderOverlay(); }
+
+  var toastT;
+  function toast(msg) {
+    toastEl.textContent = msg; toastEl.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(function () { toastEl.hidden = true; }, 2400);
+  }
+  function syncDraft() {
+    var ti = document.getElementById('f-title'), du = document.getElementById('f-due');
+    if (ti) ui.draft.title = ti.value;
+    if (du) ui.draft.due = du.value;
+  }
+  function openSheet(kind) { toastEl.hidden = true; ui.sheet = kind; ui.openedAt = Date.now(); ui.confirmDel = false; renderOverlay(); }
+  function closeSheet() { ui.sheet = null; ui.actionId = null; ui.confirmDel = false; renderOverlay(); }
+  function openAdd() {
+    var r = range();
+    ui.draft = { title: '', due: data.mode === 'day' ? ui.anchor : (r.hasToday ? r.T : r.sIso), urg: true, imp: true, editId: null };
+    openSheet('add');
+  }
+  function openAction(id) { ui.actionId = id; openSheet('action'); }
+  function saveDraft() {
+    var d = ui.draft, title = d.title.trim();
+    if (!title) {
+      var ti = document.getElementById('f-title');
+      if (ti) { ti.setAttribute('aria-invalid', 'true'); ti.placeholder = 'タスク名を入力してください'; ti.focus(); }
+      return;
+    }
+    var q = qOf(d.urg, d.imp);
+    if (ui.sheet === 'edit' && d.editId != null) {
+      var t = find(d.editId);
+      if (t) { t.title = title; t.due = d.due || ''; t.q = q; }
+      toast('タスクを更新しました');
+    } else {
+      data.tasks.push({ id: data.nextId++, title: title, due: d.due || '', q: q, done: false, created: Date.now() });
+      toast(Q[q].num + '「' + Q[q].name + '」に追加しました');
+    }
+    save(); ui.selQ = q; ui.sheet = null; render();
+  }
+  function shift(dir) {
+    var a = parse(ui.anchor), n;
+    if (data.mode === 'day') n = addDays(a, dir);
+    else if (data.mode === 'week') n = addDays(a, 7 * dir);
+    else n = new Date(a.getFullYear(), a.getMonth() + dir, 1);
+    ui.anchor = iso(n); render();
+  }
+
+  var lpTimer = null, lpFired = false, lpEl = null, sx = 0, sy = 0;
+  function clearLP() { clearTimeout(lpTimer); lpTimer = null; if (lpEl) lpEl.classList.remove('pressing'); lpEl = null; }
+
+  document.addEventListener('click', function (e) {
+    if (e.target === overlay) { if (Date.now() - ui.openedAt > 400) closeSheet(); return; }
+    var el = e.target.closest('[data-act]');
+    if (!el) return;
+    var act = el.getAttribute('data-act'), v = el.getAttribute('data-v');
+    syncDraft();
+    switch (act) {
+      case 'view': data.view = v; save(); ui.compact = false; main.scrollTop = 0; render(); break;
+      case 'mode': data.mode = v; save(); render(); break;
+      case 'prev': shift(-1); break;
+      case 'next': shift(1); break;
+      case 'today': ui.anchor = todayIso(); render(); break;
+      case 'pickq': ui.selQ = el.getAttribute('data-q'); renderHeader(); renderMain(); break;
+      case 'toggle':
+        if (lpFired) { lpFired = false; return; }
+        var t = find(+el.getAttribute('data-id'));
+        if (t) { t.done = !t.done; save(); renderHeader(); renderMain(); }
+        break;
+      case 'fab': openAdd(); break;
+      case 'close': closeSheet(); break;
+      case 'urg': ui.draft.urg = v === '1'; renderOverlay(); break;
+      case 'imp': ui.draft.imp = v === '1'; renderOverlay(); break;
+      case 'cleardue': ui.draft.due = ''; renderOverlay(); break;
+      case 'save': saveDraft(); break;
+      case 'move':
+        var mt = find(ui.actionId), k = el.getAttribute('data-q');
+        if (mt && mt.q !== k) { mt.q = k; save(); toast('「' + mt.title + '」を' + Q[k].num + '「' + Q[k].name + '」へ移動しました'); }
+        ui.sheet = null; ui.actionId = null; render();
+        break;
+      case 'edit':
+        var et = find(ui.actionId);
+        if (!et) { closeSheet(); break; }
+        ui.draft = { title: et.title, due: et.due || '', urg: et.q === 'q1' || et.q === 'q3', imp: et.q === 'q1' || et.q === 'q2', editId: et.id };
+        openSheet('edit');
+        break;
+      case 'delete':
+        if (!ui.confirmDel) { ui.confirmDel = true; renderOverlay(); break; }
+        var dt = find(ui.actionId);
+        data.tasks = data.tasks.filter(function (x) { return x.id !== ui.actionId; });
+        save(); ui.sheet = null; ui.actionId = null; ui.confirmDel = false; render();
+        if (dt) toast('「' + dt.title + '」を削除しました');
+        break;
+    }
+  });
+
+  overlay.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.id === 'f-title' && !e.isComposing) { e.preventDefault(); syncDraft(); saveDraft(); }
+  });
+  overlay.addEventListener('input', function (e) { if (e.target.id === 'f-title') e.target.removeAttribute('aria-invalid'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && ui.sheet) closeSheet(); });
+
+  main.addEventListener('pointerdown', function (e) {
+    var el = e.target.closest('.task');
+    lpFired = false;
+    if (!el) return;
+    clearLP(); lpEl = el; sx = e.clientX; sy = e.clientY;
+    el.classList.add('pressing');
+    lpTimer = setTimeout(function () {
+      lpFired = true; var id = +el.getAttribute('data-id'); clearLP();
+      if (navigator.vibrate) { try { navigator.vibrate(15); } catch (er) {} }
+      openAction(id);
+    }, 500);
+  });
+  main.addEventListener('pointermove', function (e) {
+    if (lpEl && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) clearLP();
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (n) { main.addEventListener(n, clearLP); });
+  main.addEventListener('contextmenu', function (e) {
+    var el = e.target.closest('.task');
+    if (!el) return;
+    e.preventDefault();
+    var id = +el.getAttribute('data-id');
+    clearLP();
+    if (ui.sheet !== 'action') openAction(id);
+  });
+
+  main.addEventListener('scroll', function () {
+    var y = main.scrollTop;
+    if (!ui.compact && y > 260) { ui.compact = true; renderHeader(); }
+    else if (ui.compact && y < 60) { ui.compact = false; renderHeader(); }
+  }, { passive: true });
+
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { renderHeader(); renderMain(); } });
+
+  render();
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+})();
+</script>
+</body>
+</html>
